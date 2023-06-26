@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter_tesseract_ocr/flutter_tesseract_ocr.dart';
+import 'package:smarthome/View/ObjectDetector.dart';
 import 'package:smarthome/View/TfliteModel.dart';
+import 'package:tflite/tflite.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
 class SmartHomeScreen extends StatefulWidget {
@@ -16,23 +18,47 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
   late FlutterTts flutterTts;
   PickedFile? _image;
   String recognizedText = '';
-  Interpreter? _interpreter;
-  List<dynamic>? _recognitions;
+  late File _Detectimage;
+  late String _result = "";
+  late List _objects = [];
+  bool imageSelected = false;
 
   @override
   void initState() {
     super.initState();
     flutterTts = FlutterTts();
-    _loadModel();
+    loadModel();
   }
 
-  Future _loadModel() async {
-    try {
-      final interpreterOptions = InterpreterOptions();
-      _interpreter = await Interpreter.fromAsset('assets/model.tflite',
-          options: interpreterOptions);
-    } catch (e) {
-      print('Failed to load model: $e');
+  void loadModel() async {
+    Tflite.close();
+    Tflite.loadModel(
+      model: "assets/model.tflite",
+      labels: "assets/labels.txt",
+    );
+  }
+
+  Future ObjectDetection(File image) async {
+    final List? recognition = await Tflite.runModelOnImage(
+      path: image.path,
+      numResults: 2,
+      threshold: 0.5,
+      imageMean: 127.5,
+      imageStd: 127.5,
+    );
+
+    if (recognition == null) {
+      setState(() {
+        _result = "No object detected";
+        imageSelected = true;
+      });
+    } else {
+      setState(() {
+        _objects = recognition;
+        _result = "Successfully detected";
+        _Detectimage = image;
+        imageSelected = true;
+      });
     }
   }
 
@@ -41,8 +67,7 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
     final pickedImage = await imagePicker.getImage(source: ImageSource.gallery);
     setState(() {
       _image = pickedImage;
-      recognizedText = '';
-      _recognitions = null;
+      _Detectimage = File(_image!.path);
     });
   }
 
@@ -103,24 +128,31 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
               //   child: Text('Detect Objects'),
               // ),
               SizedBox(height: 20.0),
-              if (_recognitions != null)
-                Column(
-                  children: [
-                    for (var recognition in _recognitions!)
-                      Text(
-                          '${recognition['label']} (${recognition['confidence'].toStringAsFixed(2)})'),
-                  ],
+              Text(
+                _result ?? '',
+                style: TextStyle(fontSize: 16),
+              ),
+              if (_objects != null)
+                ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _objects.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title: Text(_objects[index]['label']),
+                      subtitle:
+                          Text('Confidence: ${_objects[index]['confidence']}'),
+                    );
+                  },
                 ),
               SizedBox(height: 20.0),
+              ElevatedButton(
+                onPressed: () => ObjectDetection(_Detectimage),
+                child: Text('Detect Objects Page'),
+              ),
               SizedBox(height: 20.0),
               ElevatedButton(
                 onPressed: () => _speakText(recognizedText),
                 child: Text('Speak Text'),
-              ),
-              SizedBox(height: 20.0),
-              ElevatedButton(
-                onPressed: () => TfliteModel(),
-                child: Text('Object Detector'),
               ),
             ],
           ),
