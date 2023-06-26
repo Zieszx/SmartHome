@@ -41,8 +41,8 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
   Future ObjectDetection(File image) async {
     final List? recognition = await Tflite.runModelOnImage(
       path: image.path,
-      numResults: 2,
-      threshold: 0.5,
+      numResults: 6,
+      threshold: 0.05,
       imageMean: 127.5,
       imageStd: 127.5,
     );
@@ -81,22 +81,17 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
     }
   }
 
-  Future _speakText(String recognizedText) async {
-    print(recognizedText);
+  Future _speakText(List objects) async {
     await flutterTts.setLanguage('en-US');
     await flutterTts.setPitch(1);
-    await flutterTts.speak("TEXT TO SPEECH IS WORKING");
-  }
+    await flutterTts.setSpeechRate(0.5);
 
-  // Future _performObjectDetection() async {
-  //   if (_image != null) {
-  //     final image = await _image?.readAsBytes();
-  //     final recognitions = await _interpreter!.run(image!);
-  //     setState(() {
-  //       _recognitions = recognitions;
-  //     });
-  //   }
-  // }
+    for (var item in objects) {
+      String label = item['label'];
+      await flutterTts.speak(label);
+      await Future.delayed(Duration(seconds: 1));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -151,9 +146,10 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
               ),
               SizedBox(height: 20.0),
               ElevatedButton(
-                onPressed: () => _speakText(recognizedText),
+                onPressed: () => _speakText(_objects),
                 child: Text('Speak Text'),
               ),
+              SizedBox(height: 20.0),
             ],
           ),
         ),
