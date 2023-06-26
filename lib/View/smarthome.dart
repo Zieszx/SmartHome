@@ -81,7 +81,7 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
     }
   }
 
-  Future _speakText(List objects) async {
+  Future _speakObject(List objects) async {
     await flutterTts.setLanguage('en-US');
     await flutterTts.setPitch(1);
     await flutterTts.setSpeechRate(0.5);
@@ -91,6 +91,13 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
       await flutterTts.speak(label);
       await Future.delayed(Duration(seconds: 1));
     }
+  }
+
+  Future _speakText(String reconizedtext) async {
+    await flutterTts.setLanguage('en-US');
+    await flutterTts.setPitch(1);
+    await flutterTts.setSpeechRate(0.5);
+    await flutterTts.speak(reconizedtext);
   }
 
   @override
@@ -146,7 +153,9 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
               ),
               SizedBox(height: 20.0),
               ElevatedButton(
-                onPressed: () => _speakText(_objects),
+                onPressed: recognizedText != null
+                    ? () => _speakText(recognizedText)
+                    : () => _speakObject(_objects),
                 child: Text('Speak Text'),
               ),
               SizedBox(height: 20.0),
