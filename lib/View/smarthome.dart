@@ -148,12 +148,17 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
                 ),
               SizedBox(height: 20.0),
               ElevatedButton(
-                onPressed: () => ObjectDetection(_Detectimage),
+                onPressed: () {
+                  setState(() {
+                    recognizedText = "";
+                  });
+                  ObjectDetection(_Detectimage);
+                },
                 child: Text('Detect Objects Page'),
               ),
               SizedBox(height: 20.0),
               ElevatedButton(
-                onPressed: recognizedText != null
+                onPressed: recognizedText != ""
                     ? () => _speakText(recognizedText)
                     : () => _speakObject(_objects),
                 child: Text('Speak Text'),
