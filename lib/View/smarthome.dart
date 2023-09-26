@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter_tesseract_ocr/flutter_tesseract_ocr.dart';
-import 'package:smarthome/View/ObjectDetector.dart';
-import 'package:smarthome/View/TfliteModel.dart';
 import 'package:tflite/tflite.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 
@@ -22,6 +20,7 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
   late String _result = "";
   late List _objects = [];
   bool imageSelected = false;
+  List<String> _numberedObjects = [];
 
   @override
   void initState() {
@@ -58,6 +57,14 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
         _result = "Successfully detected";
         _Detectimage = image;
         imageSelected = true;
+
+        // Populate _numberedObjects with labels and numbering.
+        _numberedObjects = recognition.asMap().entries.map((entry) {
+          final index = entry.key + 1;
+          final label = entry.value['label'];
+          final confidence = entry.value['confidence'];
+          return '$index. $label ($confidence)';
+        }).toList();
       });
     }
   }
@@ -65,10 +72,23 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
   Future _pickImage() async {
     final imagePicker = ImagePicker();
     final pickedImage = await imagePicker.getImage(source: ImageSource.gallery);
-    setState(() {
-      _image = pickedImage;
-      _Detectimage = File(_image!.path);
-    });
+    if (pickedImage != null) {
+      setState(() {
+        _image = pickedImage;
+        _Detectimage = File(_image!.path);
+      });
+    }
+  }
+
+  Future _captureImage() async {
+    final imagePicker = ImagePicker();
+    final pickedImage = await imagePicker.getImage(source: ImageSource.camera);
+    if (pickedImage != null) {
+      setState(() {
+        _image = pickedImage;
+        _Detectimage = File(_image!.path);
+      });
+    }
   }
 
   Future _performOCR() async {
@@ -125,24 +145,18 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
               SizedBox(height: 20.0),
               Text(recognizedText),
               SizedBox(height: 20.0),
-              // ElevatedButton(
-              //   onPressed: _image != null ? _performObjectDetection : null,
-              //   child: Text('Detect Objects'),
-              // ),
               SizedBox(height: 20.0),
               Text(
                 _result ?? '',
                 style: TextStyle(fontSize: 16),
               ),
-              if (_objects != null)
+              if (_numberedObjects.isNotEmpty)
                 ListView.builder(
                   shrinkWrap: true,
-                  itemCount: _objects.length,
+                  itemCount: _numberedObjects.length,
                   itemBuilder: (context, index) {
                     return ListTile(
-                      title: Text(_objects[index]['label']),
-                      subtitle:
-                          Text('Confidence: ${_objects[index]['confidence']}'),
+                      title: Text(_numberedObjects[index]),
                     );
                   },
                 ),
@@ -164,6 +178,20 @@ class _SmartHomeScreenState extends State<SmartHomeScreen> {
                 child: Text('Speak Text'),
               ),
               SizedBox(height: 20.0),
+              Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.grey,
+                    width: 2.0,
+                  ),
+                ),
+                child: IconButton(
+                  onPressed: _captureImage,
+                  icon: Icon(Icons.camera),
+                  tooltip: 'Capture Image from Camera',
+                ),
+              ),
             ],
           ),
         ),
